@@ -309,3 +309,131 @@ async def analyze_crack(
         )
     finally:
         await file.close()
+
+
+from typing import Literal
+from pydantic import BaseModel, Field
+
+
+# ==========================================
+# ACTIVITY 3.1: CONSTRUCTION PROJECT PLANNING
+# ==========================================
+
+class ProjectPlanningRequest(BaseModel):
+    project_type: Literal[
+        "residential", "commercial", "renovation"
+    ]
+    area_sqft: float = Field(gt=0, le=10000000)
+    budget_inr: float = Field(gt=0)
+    workers: int = Field(ge=1, le=10000)
+    start_date: str = Field(
+        description="Planned start date in YYYY-MM-DD format"
+    )
+
+
+@app.post("/plan-project")
+def plan_project(request: ProjectPlanningRequest):
+    # Illustrative planning estimates, not an engineered schedule.
+    phases = [
+        {"phase": "Planning and approvals", "days": 14},
+        {"phase": "Site preparation", "days": 7},
+        {"phase": "Foundation", "days": 21},
+        {"phase": "Structural work", "days": 45},
+        {"phase": "Electrical and plumbing", "days": 21},
+        {"phase": "Finishing", "days": 30},
+        {"phase": "Inspection and handover", "days": 7},
+    ]
+
+    # Basic scale adjustment for project size and workforce.
+    size_factor = max(0.75, min(2.5, request.area_sqft / 1500))
+    workforce_factor = max(0.6, min(1.5, 8 / request.workers))
+
+    planned_days = sum(p["days"] for p in phases)
+    estimated_days = round(
+        planned_days * size_factor * workforce_factor
+    )
+
+    budget_per_sqft = request.budget_inr / request.area_sqft
+
+    return {
+        "success": True,
+        "activity": "3.1 Construction Project Planning Logic",
+        "project": request.model_dump(),
+        "estimated_duration_days": estimated_days,
+        "phases": phases,
+        "budget_per_sqft_inr": round(budget_per_sqft, 2),
+        "planning_notes": [
+            "Confirm local permits and site conditions before work begins.",
+            "Schedule depends on design, materials, weather, and contractor capacity.",
+            "Phase durations are illustrative and should be reviewed by a professional.",
+        ],
+        "risk_factors": [
+            "Material delivery delays",
+            "Weather conditions",
+            "Permit and inspection delays",
+            "Budget overruns and labour availability",
+        ],
+        "disclaimer": (
+            "Preliminary planning estimate only, not a contractor-approved schedule."
+        ),
+    }
+
+
+# ==========================================
+# ACTIVITY 3.2: REAL ESTATE VALUATION ENGINE
+# ==========================================
+
+class PropertyValuationRequest(BaseModel):
+    location: str = Field(min_length=2, max_length=200)
+    property_type: Literal[
+        "apartment", "independent_house", "commercial", "plot"
+    ]
+    area_sqft: float = Field(gt=0, le=10000000)
+    price_per_sqft_inr: float = Field(gt=0)
+    property_age_years: int = Field(ge=0, le=300)
+    bedrooms: int = Field(ge=0, le=100)
+    bathrooms: int = Field(ge=0, le=100)
+
+
+@app.post("/valuate-property")
+def valuate_property(request: PropertyValuationRequest):
+    # Use the user's supplied local price benchmark.
+    base_value = request.area_sqft * request.price_per_sqft_inr
+
+    # Simple illustrative age adjustment; not a market appraisal.
+    age_adjustment = min(request.property_age_years * 0.01, 0.30)
+    estimated_value = base_value * (1 - age_adjustment)
+
+    # A simple 10% range around the adjusted estimate.
+    lower_value = estimated_value * 0.90
+    upper_value = estimated_value * 1.10
+
+    return {
+        "success": True,
+        "activity": "3.2 Real Estate Valuation Engine",
+        "property": request.model_dump(),
+        "base_value_inr": round(base_value, 2),
+        "age_adjustment_percent": round(age_adjustment * 100, 2),
+        "estimated_value_inr": round(estimated_value, 2),
+        "indicative_range_inr": {
+            "low": round(lower_value, 2),
+            "high": round(upper_value, 2),
+        },
+        "valuation_method": (
+            "Area multiplied by user-provided price per square foot, "
+            "with a simple illustrative age adjustment."
+        ),
+        "limitations": [
+            "The supplied price per square foot is not independently verified.",
+            "Location, title, condition, floor, amenities, and comparable sales "
+            "can materially affect market value.",
+            "The range is illustrative, not a statistically derived confidence interval.",
+        ],
+        "disclaimer": (
+            "Indicative estimate only, not a certified valuation or current market quote."
+        ),
+    }
+
+from ai_integration import router as ai_router
+
+app.include_router(ai_router)
