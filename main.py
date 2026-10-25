@@ -179,3 +179,133 @@ async def analyze_image(file: UploadFile = File(...)):
 
     finally:
         await file.close()
+
+
+from pydantic import BaseModel, Field
+from typing import Literal
+
+
+class CrackFinding(BaseModel):
+    crack_type: Literal[
+        "hairline", "vertical", "diagonal", "structural", "other", "uncertain"
+    ]
+    severity: Literal["minor", "moderate", "severe", "uncertain"]
+    probable_causes: list[str] = Field(default_factory=list)
+    potential_risks: list[str] = Field(default_factory=list)
+    recommended_repairs: list[str] = Field(default_factory=list)
+    preventive_measures: list[str] = Field(default_factory=list)
+    observations: list[str] = Field(default_factory=list)
+    confidence_note: str
+
+
+@app.post("/analyze-crack")
+async def analyze_crack(
+    file: UploadFile = File(...),
+    description: str = "",
+):
+    if client is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Gemini API key is not configured.",
+        )
+
+    allowed_types = {"image/jpeg", "image/png", "image/webp"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail="Upload a JPG, PNG, or WEBP image.",
+        )
+
+    image_bytes = await file.read()
+
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="The image is empty.")
+
+    if len(image_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail="Image size must not exceed 10 MB.",
+        )
+
+    try:
+        with Image.open(BytesIO(image_bytes)) as image:
+            image.verify()
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded file is not a valid image.",
+        )
+
+    prompt = f"""
+    You are assisting with preliminary visual inspection of cracks in buildings.
+
+    User description: {description or "No description provided."}
+
+    Examine the attached image and return JSON matching this schema:
+    {{
+      "crack_type": "hairline, vertical, diagonal, structural, other, or uncertain",
+      "severity": "minor, moderate, severe, or uncertain",
+      "probable_causes": ["possible causes, clearly marked as hypotheses"],
+      "potential_risks": ["potential concerns"],
+      "recommended_repairs": ["appropriate next steps or repair considerations"],
+      "preventive_measures": ["relevant preventive measures"],
+      "observations": ["visible features only"],
+      "confidence_note": "limitations and uncertainty"
+    }}
+
+    Rules:
+    - Do not infer structural safety from a photograph alone.
+    - Do not present probable causes as confirmed facts.
+    - Do not invent crack width, depth, or measurements.
+    - If scale or image quality is inadequate, state this.
+    - If the crack cannot be assessed, use uncertain classifications.
+    - Recommend prompt professional inspection for severe-looking cracks,
+      widening cracks, displacement, or signs of structural distress.
+    - Return valid JSON only.
+    """
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=[
+                types.Part.from_bytes(
+                    data=image_bytes,
+                    mime_type=file.content_type,
+                ),
+                prompt,
+            ],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.2,
+                response_schema=CrackFinding,
+            ),
+        )
+
+        if not response.text:
+            raise HTTPException(
+                status_code=502,
+                detail="The AI returned an empty response. Try again.",
+            )
+
+        finding = CrackFinding.model_validate_json(response.text)
+
+        return {
+            "success": True,
+            "filename": file.filename,
+            "crack_analysis": finding.model_dump(),
+            "disclaimer": (
+                "Preliminary AI-assisted visual assessment only. "
+                "A qualified structural engineer must evaluate the structure."
+            ),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as error:
+        print(f"Crack analysis error: {type(error).__name__}: {error}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Crack analysis failed: {type(error).__name__}: {error}",
+        )
+    finally:
+        await file.close()
