@@ -27,6 +27,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
+from site_assistant import router as assistant_router
+
+app.include_router(assistant_router)
+
 
 # Home endpoint
 @app.get("/")
