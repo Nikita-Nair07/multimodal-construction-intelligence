@@ -437,3 +437,6 @@ def valuate_property(request: PropertyValuationRequest):
 from ai_integration import router as ai_router
 
 app.include_router(ai_router)
+
+from site_assistant import router as assistant_router
+app.include_router(assistant_router)
