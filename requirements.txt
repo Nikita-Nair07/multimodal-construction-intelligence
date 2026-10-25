@@ -5,3 +5,14 @@ pydantic
 python-multipart
 python-dotenv
 google-genai
+
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+python-dotenv
+google-genai
+fastapi
+uvicorn
+python-multipart
+Pillow
