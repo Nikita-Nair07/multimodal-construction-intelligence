@@ -1,33 +1,7 @@
-# Multimodal Construction Intelligence Platform
-## Functional and Non-Functional Requirements
 
-### 1. Project Objective
-The objective is to develop an AI-powered platform that analyzes construction-site images, supports construction planning, estimates project costs, and provides intelligent recommendations through a conversational assistant.
-
-### 2. Functional Requirements
-- FR-01: The system shall allow users to upload construction-site images.
-- FR-02: The system shall analyze uploaded images using an AI vision service.
-- FR-03: The system shall allow users to enter project information and construction tasks.
-- FR-04: The system shall calculate estimated costs using quantities and unit rates.
-- FR-05: The system shall generate project summaries and recommendations based on available data.
-- FR-06: The system shall provide a chat interface for construction-related questions.
-- FR-07: The system shall display analysis results, costs, and project progress through a dashboard.
-- FR-08: The system shall handle invalid inputs and AI service errors.
-
-### 3. Non-Functional Requirements
-- NFR-01: The user interface shall be simple and accessible.
-- NFR-02: The application shall provide reasonable response times.
-- NFR-03: API keys shall be stored securely and not exposed in frontend code.
-- NFR-04: The system shall validate uploaded files and user inputs.
-- NFR-05: The codebase shall use modular and maintainable components.
-- NFR-06: The application shall support future enhancements.
-
-### 4. Proposed Technology Stack
-- Frontend: React with Vite
-- Backend: Python with FastAPI
-- AI: Google Cloud-compatible vision and generative AI services
-- Database: SQLite for the initial prototype
-- Version Control: Git and GitHub
-
-### 5. Expected Outcome
-A functional web application that combines construction image analysis, project planning, cost estimation, and AI-based assistance.
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+python-dotenv
+google-genai
